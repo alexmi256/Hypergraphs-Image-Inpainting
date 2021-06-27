@@ -1,45 +1,41 @@
 import argparse
 import os
+import pathlib
 import time
 
 
 class TestOptions:
     def __init__(self):
-        self.parser = argparse.ArgumentParser()
-        self.initialized = False
-
-    def initialize(self):
-        self.parser.add_argument("--dataset", type=str, default="celeba-hq", help="Dataset name for testing")
-        self.parser.add_argument("--test_dir", type=str, default="", help="directory where all images are stored")
-        self.parser.add_argument(
-            "--test_file_path",
-            type=str,
-            default="",
-            help="The file storing the names of the file for testing (If not provided will run for all files in the folder)",
-        )
-        self.parser.add_argument("--base_dir", type=str, default="Testing")
-        self.parser.add_argument("--pretrained_model_dir", type=str, default="pretrained_models", help="pretrained model are provided here")
-        self.parser.add_argument("--checkpoint_prefix", type=str, default="ckpt")
-
-        self.parser.add_argument("--random_mask", type=int, default=0, help="0 -> Center 128 * 128 mask, 1 -> random mask")
-        self.parser.add_argument("--random_mask_type", type=str, default="irregular_mask", help="options - irregular_mask and random_rect")
-        self.parser.add_argument("--min_strokes", type=int, default=16)
-        self.parser.add_argument("--max_strokes", type=int, default=48)
-
-        self.parser.add_argument("--image_shape", type=str, default="256,256,3")
-        self.parser.add_argument("--test_num", type=int, default=-1)
-        self.parser.add_argument("--mode", type=str, default="save")
-        self.initialized = True
-
-    def parse(self):
-        if not self.initialized:
-            self.initialize()
-
+        self.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        self.initialize()
         self.opt = self.parser.parse_args()
 
-        assert self.opt.random_mask in [0, 1]
-        assert self.opt.random_mask_type in ["irregular_mask", "random_rect"]
+    def initialize(self):
+        self.parser.add_argument("--dataset", type=str, default="celeba-hq", help="dataset name for testing")
+        input_data = self.parser.add_mutually_exclusive_group(required=True)
+        input_data.add_argument("--test_dir", type=pathlib.Path, default=None, help="directory where all input images are stored")
+        input_data.add_argument(
+            "--test_file_path",
+            type=pathlib.Path,
+            default=None,
+            help="single input file to test",
+        )
+        self.parser.add_argument("--base_dir", type=str, default="Testing", help="directory where results will be output")
+        self.parser.add_argument("--pretrained_model_dir", type=str, default="pretrained_models", help="Directory where pretrained models are stored")
+        self.parser.add_argument("--checkpoint_prefix", type=str, default="ckpt")
 
+        self.parser.add_argument("--random_mask", type=int, default=0, choices=[0, 1], help="0 -> Center 128 * 128 mask, 1 -> random mask")
+        self.parser.add_argument(
+            "--random_mask_type", type=str, default="irregular_mask", choices=["irregular_mask", "random_rect"], help="Mask type to generate"
+        )
+        self.parser.add_argument("--min_strokes", type=int, default=16, help="Minimum number of strokes to generate when using random mask")
+        self.parser.add_argument("--max_strokes", type=int, default=48, help="Maximum number of strokes to generate when using random mask")
+
+        self.parser.add_argument("--image_shape", type=str, default="256,256,3", help="Image height and width, comma separated")
+        self.parser.add_argument("--test_num", type=int, default=-1)
+        self.parser.add_argument("--mode", type=str, default="save")
+
+    def parse(self):
         str_image_shape = self.opt.image_shape.split(",")
         self.opt.image_shape = [int(x) for x in str_image_shape]
 
