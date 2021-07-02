@@ -26,7 +26,13 @@ class TestOptions:
 
         self.parser.add_argument("--random_mask", type=int, default=0, choices=[0, 1], help="0 -> Center 128 * 128 mask, 1 -> random mask")
         self.parser.add_argument(
-            "--random_mask_type", type=str, default="irregular_mask", choices=["irregular_mask", "random_rect"], help="Mask type to generate"
+            "--mask_shape",
+            type=str,
+            default="square_128",
+            help="Mark size and shape. rect or square. random or not. width and/or height. ex. random_rect_64_32",
+        )
+        self.parser.add_argument(
+            "--mask_position", type=str, default="center", choices=["uniform", "center", "random"], help="Where the mark will occur in image"
         )
         self.parser.add_argument("--min_strokes", type=int, default=16, help="Minimum number of strokes to generate when using random mask")
         self.parser.add_argument("--max_strokes", type=int, default=48, help="Maximum number of strokes to generate when using random mask")
