@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from models.model import Model
 from options.test_options import TestOptions
-from utils.util import center_mask, irregular_mask, save_images
+from utils.util import center_mask, irregular_mask, rectangle_mask, save_images
 
 SUPPORTED_IMAGE_TYPES = ["jpg", "png", "jpeg"]
 
@@ -37,7 +37,7 @@ def test(config):
         if config.random_mask == 1:
             mask = irregular_mask(config.image_shape[0], config.image_shape[1], config.min_strokes, config.max_strokes)
         else:
-            mask = center_mask(config.image_shape[0], config.image_shape[1])
+            mask = rectangle_mask(config.image_shape[0], config.image_shape[1], shape=config.mask_shape, position=config.mask_position)
 
         gt_image = load_image(str(config.test_file_path), config)
         gt_image = np.expand_dims(gt_image, axis=0)
