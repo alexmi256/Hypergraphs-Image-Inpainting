@@ -8,6 +8,8 @@ from models.model import Model
 from options.train_options import TrainOptions
 from utils.util import center_mask, irregular_mask, save_images
 
+SUPPORTED_IMAGE_TYPES = ["jpg", "png", "jpeg"]
+
 
 def load_images(image_file):
     original_image = tf.io.read_file(image_file)
@@ -99,7 +101,6 @@ def train_step(original_image, masked_image, mask, epoch):
 
 
 def fit(config, train_dataset, epochs):
-    mask_function = None
     if config.random_mask == 0:
         mask_function = center_mask
     else:
@@ -134,6 +135,8 @@ def fit(config, train_dataset, epochs):
             avg_pl_comp += pl_comp
             avg_disc_loss += disc_loss
 
+        print(f"n is {n}, train_dataset size is {len(train_dataset)}")
+
         avg_total_loss /= n.numpy() + 1
         avg_valid_l1_loss /= n.numpy() + 1
         avg_hole_l1_loss /= n.numpy() + 1
@@ -159,9 +162,9 @@ def fit(config, train_dataset, epochs):
 def train(config):
     train_files = []
     if config.train_file_path == "":
-        for root, dirs, files in os.walk(config.train_dir):
-            for file in files:
-                train_files.append(os.path.join(root, file))
+        for entry in config.train_dir.iterdir():
+            if entry.is_file() and entry.suffix.lower()[1:] in SUPPORTED_IMAGE_TYPES:
+                train_files.append(str(entry))
     else:
         train_files = open(config.train_file_path)
         train_files = [line[:-1] for line in train_files.readlines()]

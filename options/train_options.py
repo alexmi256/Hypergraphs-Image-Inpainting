@@ -6,7 +6,8 @@ import time
 class TrainOptions:
     def __init__(self):
         self.parser = argparse.ArgumentParser()
-        self.initialized = False
+        self.initialize()
+        self.opt = self.parser.parse_args()
 
     def initialize(self):
         self.parser.add_argument("--dataset", type=str, default="celeba-hq", help="Dataset name for training")
@@ -24,9 +25,19 @@ class TrainOptions:
         self.parser.add_argument("--batch_size", type=int, default=1, help="batch size used during training")
         self.parser.add_argument("--buffer_size", type=int, default=500, help="buffer size for data")
 
-        self.parser.add_argument("--random_mask", type=int, default=0, help="0 -> Center 128 * 128 mask, 1 -> random mask")
-        self.parser.add_argument("--random_mask_type", type=str, default="irregular_mask", help="options - irregular_mask and random_rect")
-        self.parser.add_argument("--incremental_training", type=int, default=1, help="1 -> using incremental training, 0 -> not using incremental training")
+        self.parser.add_argument("--random_mask", type=int, default=0, choices=[0, 1], help="0 -> Square of 128 * 128, 1 -> Random lines of different sizes")
+        self.parser.add_argument(
+            "--mask_shape",
+            type=str,
+            default="square_128",
+            help="Mark size and shape. rect or square. random or not. width and/or height. ex. random_rect_64_32",
+        )
+        self.parser.add_argument(
+            "--mask_position", type=str, default="uniform", choices=["uniform", "center", "random"], help="Where the mark will occur in image"
+        )
+        self.parser.add_argument(
+            "--incremental_training", type=int, default=1, choices=[0, 1], help="1 -> using incremental training, 0 -> not using incremental training"
+        )
 
         self.parser.add_argument("--epochs", type=int, default=200)
         self.parser.add_argument("--valid_l1_loss", type=float, default=0.2)
@@ -41,24 +52,14 @@ class TrainOptions:
         self.parser.add_argument("--decay_steps", type=int, default=50000)
 
         self.parser.add_argument("--image_shape", type=str, default="256,256,3")
-        self.initialized = True
 
     def parse(self):
-        if not self.initialized:
-            self.initialize()
-
-        self.opt = self.parser.parse_args()
-
         str_ids = self.opt.gpu_ids.split(",")
         self.opt.gpu_ids = []
         for str_id in str_ids:
-            id = int(str_id)
-            if id >= 0:
-                self.opt.gpu_ids.append(str(id))
-
-        assert self.opt.random_mask in [0, 1]
-        assert self.opt.random_mask_type in ["irregular_mask", "random_rect"]
-        assert self.opt.incremental_training in [0, 1]
+            int_id = int(str_id)
+            if int_id >= 0:
+                self.opt.gpu_ids.append(str(int_id))
 
         str_image_shape = self.opt.image_shape.split(",")
         self.opt.image_shape = [int(x) for x in str_image_shape]
@@ -98,3 +99,5 @@ class TrainOptions:
 
 options = TrainOptions()
 args = options.parse()
+
+# python training.py --dataset custom --train_dir frames/features/cropped --random_mask ???
