@@ -65,7 +65,7 @@ python training.py  --random_mask 1 --train_dir [Training Folder Path] --batch_s
 
 where `[Training Folder Path]` indicates the path in which training images are stored, and `[Batch Size]` indicated the batch size used for training.
 
-For center mask change the `-random mask` to `1`.
+For center mask remove or change the `--random_mask` flag to `0`.
 
 Instead of providing the training directory you can also make a file in which the path of all training images is stored (`--train_file_path [TRAIN FILE PATH]`)
 

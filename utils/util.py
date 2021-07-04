@@ -116,6 +116,14 @@ def rectangle_mask(image_height, image_width, batch_size=1, shape="random_rect",
     return mask
 
 
+def json_data_mask(image_height, image_width, batch_size=1, image_name=None, mask_data=None):
+    # FIXME: Figure this out, maybe create maks at load time?
+    mask = np.zeros((batch_size, image_height, image_width, 1)).astype("float32")
+    mask[:, mask_data[0] : mask_data[2], mask_data[1] : mask_data[3], :] = 1.0
+
+    return mask
+
+
 def save_images(input_image, ground_truth, prediction_coarse, prediction_refine, path):
 
     display_list = [input_image, ground_truth, prediction_coarse, prediction_refine]

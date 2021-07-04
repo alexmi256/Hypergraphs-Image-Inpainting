@@ -1,3 +1,4 @@
+import json
 import os
 
 import numpy as np
@@ -6,7 +7,7 @@ from tqdm import tqdm
 
 from models.model import Model
 from options.train_options import TrainOptions
-from utils.util import center_mask, irregular_mask, save_images
+from utils.util import irregular_mask, json_data_mask, rectangle_mask, save_images
 
 SUPPORTED_IMAGE_TYPES = ["jpg", "png", "jpeg"]
 
@@ -17,13 +18,13 @@ def load_images(image_file):
     original_image = tf.cast(original_image, dtype=tf.float32)
     original_image = tf.image.resize(original_image, [IMAGE_HEIGHT, IMAGE_WIDTH])
     original_image = original_image / 255.0
-
+    # TODO: Figure out packing of name or the specific file mask?
     return original_image
 
 
-def predict(config, dataset, epoch, mask_function):
+def predict(config, dataset, epoch, mask_function, mask_function_options):
     for n, (original_image) in dataset.take(100).enumerate():
-        mask = mask_function(config.image_shape[0], config.image_shape[1], batch_size=BATCH_SIZE)
+        mask = mask_function(config.image_shape[0], config.image_shape[1], **mask_function_options)
         masked_image = np.where(mask == 1, 1, original_image)
 
         prediction_coarse, prediction_refine = generator([masked_image, mask], training=False)
@@ -101,10 +102,18 @@ def train_step(original_image, masked_image, mask, epoch):
 
 
 def fit(config, train_dataset, epochs):
-    if config.random_mask == 0:
-        mask_function = center_mask
+    mask_function_options = {}
+    if config.mask_json:
+        mask_function = json_data_mask
+        mask_function_options["image_data"] = config.mask_json
     else:
-        mask_function = irregular_mask
+        if config.random_mask == 1:
+            mask_function = irregular_mask
+            mask_function_options["batch_size"] = BATCH_SIZE
+        else:
+            mask_function = rectangle_mask
+            mask_function_options["shape"] = config.mask_shape
+            mask_function_options["position"] = config.mask_position
 
     for epoch in range(0, epochs):
         if not os.path.isdir(os.path.join(config.training_dir, f"EPOCH{epoch}")):
@@ -121,7 +130,8 @@ def fit(config, train_dataset, epochs):
 
         print("EPOCH : " + str(epoch))
         for n, (original_image) in tqdm(train_dataset.enumerate()):
-            mask = mask_function(config.image_shape[0], config.image_shape[1], batch_size=BATCH_SIZE)
+            mask = mask_function(config.image_shape[0], config.image_shape[1], **mask_function_options)
+
             masked_image = np.where(mask == 1, 1, original_image)
 
             total_loss, valid_l1_loss, hole_l1_loss, edge_loss, gan_loss, pl_out, pl_comp, disc_loss = train_step(original_image, masked_image, mask, epoch)
@@ -135,7 +145,7 @@ def fit(config, train_dataset, epochs):
             avg_pl_comp += pl_comp
             avg_disc_loss += disc_loss
 
-        print(f"n is {n}, train_dataset size is {len(train_dataset)}")
+        # TODO: Replace n with len(train_dataset) ? since they are same thing
 
         avg_total_loss /= n.numpy() + 1
         avg_valid_l1_loss /= n.numpy() + 1
@@ -156,12 +166,12 @@ def fit(config, train_dataset, epochs):
         print("avg_disc_loss = ", avg_disc_loss)
 
         checkpoint.save(file_prefix=checkpoint_prefix)
-        predict(config, train_dataset, epoch, mask_function)
+        predict(config, train_dataset, epoch, mask_function, mask_function_options)
 
 
 def train(config):
     train_files = []
-    if config.train_file_path == "":
+    if config.train_dir:
         for entry in config.train_dir.iterdir():
             if entry.is_file() and entry.suffix.lower()[1:] in SUPPORTED_IMAGE_TYPES:
                 train_files.append(str(entry))
@@ -197,6 +207,10 @@ if __name__ == "__main__":
     learning_rate = config.learning_rate
     decay_steps = config.decay_steps
     decay_rate = config.decay_rate
+
+    if config.mask_json:
+        with open(config.mask_json) as infile:
+            config.mask_json = json.load(infile)
 
     RESTORE_CHECKPOINT = False
     if config.pretrained_model_dir != "":

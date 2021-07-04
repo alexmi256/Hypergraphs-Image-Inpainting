@@ -1,5 +1,6 @@
 import argparse
 import os
+import pathlib
 import time
 
 
@@ -11,11 +12,10 @@ class TrainOptions:
 
     def initialize(self):
         self.parser.add_argument("--dataset", type=str, default="celeba-hq", help="Dataset name for training")
-        self.parser.add_argument("--train_dir", type=str, default="", help="directory where all images are stored")
+        self.parser.add_argument("--train_dir", type=pathlib.Path, help="directory where all images are stored")
         self.parser.add_argument(
             "--train_file_path",
-            type=str,
-            default="",
+            type=pathlib.Path,
             help="The file storing the names of the file for training (If not provided training will happen for all images in train_dir)",
         )
         self.parser.add_argument("--gpu_ids", type=str, default="0", help="GPU to be used")
@@ -37,6 +37,9 @@ class TrainOptions:
         )
         self.parser.add_argument(
             "--incremental_training", type=int, default=1, choices=[0, 1], help="1 -> using incremental training, 0 -> not using incremental training"
+        )
+        self.parser.add_argument(
+            "--mask_json", type=pathlib.Path, help="JSON file which has {'image_path': [start_x, start_y, end_x, end_y], ...} for mask data"
         )
 
         self.parser.add_argument("--epochs", type=int, default=200)
@@ -100,4 +103,5 @@ class TrainOptions:
 options = TrainOptions()
 args = options.parse()
 
-# python training.py --dataset custom --train_dir frames/features/cropped --random_mask ???
+# python training.py --dataset custom --train_dir frames/features/cropped --mask_shape random_rect_128_64 --mask_position uniform
+# python training.py --dataset custom --train_dir frames/features/cropped --mask_json frames/features/cropped_and_resized_mask_positions.json
